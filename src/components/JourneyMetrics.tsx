@@ -1,15 +1,17 @@
 import type { Profile } from "../types";
 import { ArrowDownIcon, ArrowUpIcon } from "../icons";
 import { formatLong, weeksSince } from "../metrics";
+import { fromLbs } from "../units";
 
 interface Props {
-  totalLost: number;
+  totalLost: number; // in lbs
   profile: Profile;
 }
 
 export default function JourneyMetrics({ totalLost, profile }: Props) {
   const lost = totalLost >= 0;
   const weeks = weeksSince(profile.startDate);
+  const magnitude = fromLbs(Math.abs(totalLost), profile.unit);
 
   return (
     <section className="rounded-2xl border border-accent/40 bg-gradient-to-b from-accent/[0.08] to-transparent p-4">
@@ -21,7 +23,7 @@ export default function JourneyMetrics({ totalLost, profile }: Props) {
           <ArrowUpIcon className="h-7 w-7 text-red-400" />
         )}
         <span className="text-[2rem] font-bold leading-none text-white">
-          {Math.abs(totalLost).toFixed(1)} {profile.unit}
+          {magnitude.toFixed(1)} {profile.unit}
         </span>
         <span className={`text-[1.05rem] font-semibold ${lost ? "text-loss" : "text-red-400"}`}>
           Total

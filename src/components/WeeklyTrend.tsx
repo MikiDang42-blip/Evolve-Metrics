@@ -1,28 +1,81 @@
+import { useMemo, useState } from "react";
 import {
   Area,
   AreaChart,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts";
-import type { TrendPoint } from "../metrics";
+import type { Entry, Profile } from "../types";
+import { trendSeries } from "../metrics";
+import { fromLbs } from "../units";
 
 interface Props {
-  data: TrendPoint[];
-  unit: string;
+  entries: Entry[];
+  profile: Profile;
 }
 
-export default function WeeklyTrend({ data, unit }: Props) {
+const RANGES = [
+  { id: "1m", label: "1M", days: 30 },
+  { id: "3m", label: "3M", days: 90 },
+  { id: "6m", label: "6M", days: 180 },
+  { id: "all", label: "All", days: Infinity },
+] as const;
+
+export default function WeeklyTrend({ entries, profile }: Props) {
+  const [range, setRange] = useState<string>("3m");
+  const unit = profile.unit;
+
+  const data = useMemo(() => {
+    const days = RANGES.find((r) => r.id === range)?.days ?? Infinity;
+    let filtered = entries;
+    if (isFinite(days) && entries.length) {
+      const cutoff = new Date(entries[entries.length - 1].date);
+      cutoff.setDate(cutoff.getDate() - days);
+      filtered = entries.filter((e) => new Date(e.date) >= cutoff);
+    }
+    return trendSeries(filtered, 28).map((p) => ({
+      ...p,
+      weight: Math.round(fromLbs(p.weight, unit) * 10) / 10,
+    }));
+  }, [entries, range, unit]);
+
+  if (data.length < 2) {
+    return (
+      <section className="rounded-2xl border border-white/8 bg-card p-4">
+        <h2 className="text-[0.95rem] font-semibold text-white">Weekly Trend</h2>
+        <p className="mt-3 text-[0.8rem] text-white/40">
+          Log a few more entries to see your trend.
+        </p>
+      </section>
+    );
+  }
+
   const weights = data.map((d) => d.weight);
   const min = Math.floor(Math.min(...weights) - 1);
   const max = Math.ceil(Math.max(...weights) + 1);
+  const goalDisp = Math.round(fromLbs(profile.goalWeight, unit) * 10) / 10;
+  const showGoal = goalDisp >= min && goalDisp <= max;
 
   return (
     <section className="rounded-2xl border border-white/8 bg-card p-4">
-      <div className="mb-1 flex items-baseline justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <h2 className="text-[0.95rem] font-semibold text-white">Weekly Trend</h2>
-        <span className="text-[0.75rem] text-white/35">{data.length} points</span>
+        <div className="flex gap-1 rounded-lg bg-cardalt p-0.5">
+          {RANGES.map((r) => (
+            <button
+              key={r.id}
+              onClick={() => setRange(r.id)}
+              className={`rounded-md px-2 py-0.5 text-[0.7rem] font-medium transition ${
+                range === r.id ? "bg-accent text-white" : "text-white/45 hover:text-white/70"
+              }`}
+            >
+              {r.label}
+            </button>
+          ))}
+        </div>
       </div>
       <div className="h-40 w-full">
         <ResponsiveContainer width="100%" height="100%">
@@ -46,6 +99,20 @@ export default function WeeklyTrend({ data, unit }: Props) {
               interval={Math.max(0, Math.floor(data.length / 5) - 1)}
               minTickGap={20}
             />
+            {showGoal && (
+              <ReferenceLine
+                y={goalDisp}
+                stroke="#4ade80"
+                strokeDasharray="4 4"
+                strokeOpacity={0.6}
+                label={{
+                  value: "goal",
+                  fill: "rgba(74,222,128,0.7)",
+                  fontSize: 10,
+                  position: "insideTopRight",
+                }}
+              />
+            )}
             <Tooltip
               cursor={{ stroke: "rgba(139,92,246,0.4)", strokeWidth: 1 }}
               contentStyle={{

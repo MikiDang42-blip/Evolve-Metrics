@@ -67,6 +67,74 @@ export function trendSeries(entries: Entry[], maxPoints = 24): TrendPoint[] {
   return points;
 }
 
+/** Average change in lbs/week over a recent window (negative = losing). */
+export function weeklyRate(entries: Entry[], windowDays = 28): number {
+  if (entries.length < 2) return 0;
+  const last = entries[entries.length - 1];
+  const cutoff = new Date(last.date);
+  cutoff.setDate(cutoff.getDate() - windowDays);
+  const recent = entries.filter((e) => new Date(e.date) >= cutoff);
+  const series = recent.length >= 2 ? recent : entries;
+  const a = series[0];
+  const b = series[series.length - 1];
+  const days = Math.max(1, (new Date(b.date).getTime() - new Date(a.date).getTime()) / 86400000);
+  const perDay = (b.weight - a.weight) / days;
+  return Math.round(perDay * 7 * 100) / 100;
+}
+
+/** Pounds still to lose to reach goal (0 if already at/under goal). */
+export function remainingToGoal(entries: Entry[], profile: Profile): number {
+  const last = latestWeight(entries);
+  if (last == null) return 0;
+  return Math.max(0, Math.round((last - profile.goalWeight) * 10) / 10);
+}
+
+/**
+ * Projected goal date based on the recent rate.
+ * Returns "reached" if already at goal, or null if not trending toward it.
+ */
+export function projectedGoalDate(entries: Entry[], profile: Profile): string | "reached" | null {
+  const remaining = remainingToGoal(entries, profile);
+  if (remaining <= 0) return "reached";
+  const rate = weeklyRate(entries); // negative when losing
+  if (rate >= -0.05) return null; // flat or gaining
+  const weeks = remaining / Math.abs(rate);
+  if (!isFinite(weeks) || weeks > 520) return null; // cap at ~10 years
+  const d = new Date(entries[entries.length - 1].date);
+  d.setDate(d.getDate() + Math.round(weeks * 7));
+  return d.toISOString().slice(0, 10);
+}
+
+export function bmi(weightLbs: number, heightIn: number): number {
+  if (!heightIn) return 0;
+  return Math.round(((703 * weightLbs) / (heightIn * heightIn)) * 10) / 10;
+}
+
+export function bmiCategory(value: number): string {
+  if (value <= 0) return "—";
+  if (value < 18.5) return "Underweight";
+  if (value < 25) return "Healthy";
+  if (value < 30) return "Overweight";
+  return "Obese";
+}
+
+/** Consecutive days logged, counting back from the most recent entry. */
+export function loggingStreak(entries: Entry[]): number {
+  if (!entries.length) return 0;
+  const days = new Set(entries.map((e) => e.date));
+  let streak = 0;
+  const cursor = new Date(entries[entries.length - 1].date);
+  while (days.has(cursor.toISOString().slice(0, 10))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+export function formatMonthDay(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export function formatShort(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });

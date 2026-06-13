@@ -8,9 +8,10 @@ export interface Entry {
 }
 
 export interface Profile {
-  startWeight: number;
-  goalWeight: number;
+  startWeight: number; // stored in lbs
+  goalWeight: number; // stored in lbs
   startDate: string; // ISO date
   phase: string;
   unit: "lbs" | "kg";
+  heightIn: number; // height in inches, for BMI
 }

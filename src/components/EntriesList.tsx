@@ -1,10 +1,12 @@
 import type { Entry } from "../types";
 import { ArrowDownIcon, ArrowUpIcon, TrashIcon } from "../icons";
 import { formatShort } from "../metrics";
+import type { Unit } from "../units";
+import { fromLbs } from "../units";
 
 interface Props {
   entries: Entry[];
-  unit: string;
+  unit: Unit;
   onRemove: (id: string) => void;
 }
 
@@ -25,6 +27,7 @@ export default function EntriesList({ entries, unit, onRemove }: Props) {
           const prev = idx > 0 ? chronological[idx - 1] : null;
           const delta = prev ? Math.round((e.weight - prev.weight) * 10) / 10 : 0;
           const down = delta < 0;
+          const deltaDisp = fromLbs(Math.abs(delta), unit);
           return (
             <div
               key={e.id}
@@ -41,7 +44,7 @@ export default function EntriesList({ entries, unit, onRemove }: Props) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-[0.95rem] font-semibold text-white">
-                  {e.weight.toFixed(1)} {unit}
+                  {fromLbs(e.weight, unit).toFixed(1)} {unit}
                 </p>
                 <p className="text-[0.72rem] text-white/40">{formatShort(e.date)}</p>
               </div>
@@ -51,8 +54,8 @@ export default function EntriesList({ entries, unit, onRemove }: Props) {
                     down ? "text-loss" : "text-red-400"
                   }`}
                 >
-                  {down ? "" : "+"}
-                  {delta.toFixed(1)}
+                  {down ? "−" : "+"}
+                  {deltaDisp.toFixed(1)}
                 </span>
               )}
               <button
