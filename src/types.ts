@@ -4,14 +4,19 @@ export interface Entry {
   date: string;
   /** weight in pounds */
   weight: number;
+  /** waist circumference in inches (optional) */
+  waist?: number;
   note?: string;
 }
 
 export interface Profile {
   startWeight: number; // stored in lbs
-  goalWeight: number; // stored in lbs
-  startDate: string; // ISO date
+  goalWeight: number;  // stored in lbs
+  startDate: string;   // ISO date
   phase: string;
   unit: "lbs" | "kg";
-  heightIn: number; // height in inches, for BMI
+  heightIn: number;    // for BMI
 }
+
+/** Derived from profile.phase — drives how pace/trend is interpreted. */
+export type PhaseMode = "cut" | "bulk" | "maintain" | "recomp";

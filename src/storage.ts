@@ -76,20 +76,25 @@ export function useEntries() {
     localStorage.setItem(ENTRIES_KEY, JSON.stringify(entries));
   }, [entries]);
 
-  const addEntry = (weight: number, note?: string, date?: string) => {
+  const addEntry = (weight: number, waist?: number | null, note?: string, date?: string) => {
     const day = date ?? todayISO();
     setEntries((prev) => {
       const without = prev.filter((e) => e.date !== day);
-      return sortEntries([...without, { id: uid(), date: day, weight, note }]);
+      const next: Entry = { id: uid(), date: day, weight, note };
+      if (waist != null && waist > 0) next.waist = Math.round(waist * 10) / 10;
+      return sortEntries([...without, next]);
     });
   };
 
-  const updateEntry = (id: string, weight: number, date: string) => {
+  const updateEntry = (id: string, weight: number, date: string, waist?: number | null) => {
     setEntries((prev) => {
       const existing = prev.find((e) => e.id === id);
       if (!existing) return prev;
       const without = prev.filter((e) => e.id !== id && e.date !== date);
-      return sortEntries([...without, { ...existing, weight: Math.round(weight * 10) / 10, date }]);
+      const updated: Entry = { ...existing, weight: Math.round(weight * 10) / 10, date };
+      if (waist != null && waist > 0) updated.waist = Math.round(waist * 10) / 10;
+      else delete updated.waist;
+      return sortEntries([...without, updated]);
     });
   };
 
