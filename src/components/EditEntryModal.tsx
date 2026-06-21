@@ -8,18 +8,20 @@ import { todayISO } from "../dateUtils";
 interface Props {
   entry: Entry | null;
   unit: Unit;
-  onSave: (id: string, weightLbs: number, date: string) => void;
+  onSave: (id: string, weightLbs: number, date: string, waist?: number | null) => void;
   onClose: () => void;
 }
 
 export default function EditEntryModal({ entry, unit, onSave, onClose }: Props) {
   const [weight, setWeight] = useState("");
   const [date, setDate] = useState("");
+  const [waist, setWaist] = useState("");
 
   useEffect(() => {
     if (entry) {
       setWeight(fromLbs(entry.weight, unit).toFixed(1));
       setDate(entry.date);
+      setWaist(entry.waist != null ? String(entry.waist) : "");
     }
   }, [entry, unit]);
 
@@ -28,7 +30,13 @@ export default function EditEntryModal({ entry, unit, onSave, onClose }: Props) 
   const save = () => {
     const w = parseFloat(weight);
     if (!isFinite(w) || w <= 0 || !date) return;
-    onSave(entry.id, Math.round(toLbs(w, unit) * 10) / 10, date);
+    const waistVal = waist ? parseFloat(waist) : null;
+    onSave(
+      entry.id,
+      Math.round(toLbs(w, unit) * 10) / 10,
+      date,
+      waistVal && isFinite(waistVal) && waistVal > 0 ? waistVal : null,
+    );
     onClose();
   };
 
@@ -63,6 +71,18 @@ export default function EditEntryModal({ entry, unit, onSave, onClose }: Props) 
               value={weight}
               onChange={(e) => setWeight(e.target.value)}
               className="w-full rounded-xl border border-white/10 bg-cardalt px-4 py-3 text-[1.1rem] font-semibold text-white focus:border-accent focus:outline-none"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-[0.8rem] text-white/50">Waist (in) — optional</span>
+            <input
+              type="number"
+              inputMode="decimal"
+              value={waist}
+              placeholder="e.g. 34.5"
+              onChange={(e) => setWaist(e.target.value)}
+              className="w-full rounded-xl border border-white/10 bg-cardalt px-4 py-3 text-[0.95rem] text-white placeholder:text-white/25 focus:border-accent focus:outline-none"
             />
           </label>
 

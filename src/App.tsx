@@ -14,11 +14,19 @@ import EditEntryModal from "./components/EditEntryModal";
 import Celebration from "./components/Celebration";
 import { useEntries, useProfile } from "./storage";
 import type { Entry, Profile } from "./types";
-import { goalProgress, lastChange, latestWeight, totalLost } from "./metrics";
+import {
+  currentMA7,
+  getPhaseMode,
+  goalProgress,
+  latestWeight,
+  totalLost,
+  trendDisplayForPhase,
+  weeklyRate,
+} from "./metrics";
 import { fromLbs, toLbs, type Unit } from "./units";
 import { exportCSV, exportJSON } from "./export";
 import { todayISO } from "./dateUtils";
-import { ArrowDownIcon, ArrowUpIcon, BellIcon, DownloadIcon, ScaleIcon } from "./icons";
+import { BellIcon, DownloadIcon, ScaleIcon } from "./icons";
 
 export default function App() {
   const { entries, addEntry, updateEntry, removeEntry, resetAll } = useEntries();
@@ -38,8 +46,8 @@ export default function App() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2200);
   };
 
-  const handleAdd = (weightLbs: number, note: string | undefined, date: string) => {
-    addEntry(weightLbs, note, date);
+  const handleAdd = (weightLbs: number, waist: number | null, note: string | undefined, date: string) => {
+    addEntry(weightLbs, waist, note, date);
     const isToday = date === todayISO();
     notify(
       `Logged ${fromLbs(weightLbs, profile.unit).toFixed(1)} ${profile.unit}` +
@@ -47,8 +55,8 @@ export default function App() {
     );
   };
 
-  const handleUpdate = (id: string, weightLbs: number, date: string) => {
-    updateEntry(id, weightLbs, date);
+  const handleUpdate = (id: string, weightLbs: number, date: string, waist?: number | null) => {
+    updateEntry(id, weightLbs, date, waist);
     notify(`Updated to ${fromLbs(weightLbs, profile.unit).toFixed(1)} ${profile.unit}`);
   };
 
@@ -58,10 +66,12 @@ export default function App() {
   };
 
   const current = latestWeight(entries) ?? profile.startWeight;
-  const change = lastChange(entries);
-  const changeDisp = fromLbs(Math.abs(change), profile.unit);
+  const ma7 = currentMA7(entries);
   const lost = totalLost(entries, profile);
   const progress = goalProgress(entries, profile);
+  const mode = getPhaseMode(profile.phase);
+  const rate = weeklyRate(entries, 28);
+  const trendDisplay = trendDisplayForPhase(rate, mode);
 
   const loggedToday = useMemo(
     () => entries.some((e) => e.date === todayISO()),
@@ -91,27 +101,43 @@ export default function App() {
           {/* ── HOME ─────────────────────────────────────── */}
           {tab === "home" && (
             <div className="animate-fade-up">
-              {/* Hero */}
+              {/* Hero — 7-day average is the star */}
               <div className="flex flex-col items-center pt-1">
                 <div className="flex items-baseline gap-1.5">
                   <span className="text-[2.6rem] font-bold leading-none text-white">
-                    {fromLbs(current, profile.unit).toFixed(1)}
+                    {fromLbs(ma7 ?? current, profile.unit).toFixed(1)}
                   </span>
                   <span className="text-[1.1rem] font-medium text-white/50">
                     {profile.unit}
                   </span>
                 </div>
-                <div className="mt-1.5 flex items-center gap-1 text-[0.85rem]">
-                  {change <= 0 ? (
-                    <ArrowDownIcon className="h-4 w-4 text-loss" />
-                  ) : (
-                    <ArrowUpIcon className="h-4 w-4 text-red-400" />
-                  )}
-                  <span className={change <= 0 ? "text-loss" : "text-red-400"}>
-                    {changeDisp.toFixed(1)} {profile.unit}
+                <p className="mt-0.5 text-[0.72rem] text-white/35">7-day average</p>
+
+                {/* Weekly slope */}
+                <div className="mt-2 flex items-center gap-1.5 text-[0.88rem]">
+                  <span
+                    className={
+                      trendDisplay.tone === "good"
+                        ? "font-semibold text-loss"
+                        : trendDisplay.tone === "warn"
+                        ? "font-semibold text-red-400"
+                        : "font-medium text-white/55"
+                    }
+                  >
+                    {rate < -0.05 ? "−" : rate > 0.05 ? "+" : "±"}
+                    {fromLbs(Math.abs(rate), profile.unit).toFixed(1)} {profile.unit}/wk
                   </span>
-                  <span className="text-white/30">since last</span>
+                  <span className="text-white/25">·</span>
+                  <span className="text-white/45">{trendDisplay.label}</span>
                 </div>
+
+                {/* Today's raw log — secondary context */}
+                {loggedToday && (
+                  <p className="mt-1 text-[0.72rem] text-white/28">
+                    Today's log: {fromLbs(current, profile.unit).toFixed(1)} {profile.unit}
+                  </p>
+                )}
+
                 <div className="mt-5">
                   <ProgressRing percent={progress} />
                 </div>
@@ -168,6 +194,7 @@ export default function App() {
                   entries={entries.slice(-5)}
                   unit={profile.unit}
                   title="Recent"
+                  phaseMode={mode}
                   onRemove={handleRemove}
                   onEdit={setEditEntry}
                 />
@@ -188,6 +215,7 @@ export default function App() {
               <EntriesList
                 entries={entries}
                 unit={profile.unit}
+                phaseMode={mode}
                 onRemove={handleRemove}
                 onEdit={setEditEntry}
               />
