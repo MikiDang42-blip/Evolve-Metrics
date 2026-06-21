@@ -32,7 +32,7 @@ export default function JourneyMetrics({ totalLost, profile }: Props) {
       <div className="mt-3 space-y-0.5 text-[0.8rem] text-white/45">
         <p>Started on: {formatLong(profile.startDate)}</p>
         <p>
-          {weeks} {weeks === 1 ? "Week" : "Weeks"} in the {profile.phase}
+          Week {weeks} &mdash; {profile.phase}
         </p>
       </div>
     </section>

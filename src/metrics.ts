@@ -1,4 +1,5 @@
 import type { Entry, Profile } from "./types";
+import { isoAddDays, isoToUTCDate, MS_PER_DAY } from "./dateUtils";
 
 export function latestWeight(entries: Entry[]): number | null {
   if (!entries.length) return null;
@@ -10,7 +11,6 @@ export function previousWeight(entries: Entry[]): number | null {
   return entries[entries.length - 2].weight;
 }
 
-/** Change since the previous entry (negative means lost weight). */
 export function lastChange(entries: Entry[]): number {
   const last = latestWeight(entries);
   const prev = previousWeight(entries);
@@ -18,14 +18,12 @@ export function lastChange(entries: Entry[]): number {
   return Math.round((last - prev) * 10) / 10;
 }
 
-/** Total lost from start weight to now. Positive number = pounds lost. */
 export function totalLost(entries: Entry[], profile: Profile): number {
   const last = latestWeight(entries);
   if (last == null) return 0;
   return Math.round((profile.startWeight - last) * 10) / 10;
 }
 
-/** Progress toward the goal as a 0-100 percentage. */
 export function goalProgress(entries: Entry[], profile: Profile): number {
   const last = latestWeight(entries);
   if (last == null) return 0;
@@ -36,9 +34,8 @@ export function goalProgress(entries: Entry[], profile: Profile): number {
 }
 
 export function weeksSince(startDate: string): number {
-  const start = new Date(startDate).getTime();
-  const now = Date.now();
-  return Math.max(0, Math.floor((now - start) / (1000 * 60 * 60 * 24 * 7)));
+  const start = isoToUTCDate(startDate).getTime();
+  return Math.max(0, Math.floor((Date.now() - start) / (MS_PER_DAY * 7)));
 }
 
 export interface TrendPoint {
@@ -47,18 +44,13 @@ export interface TrendPoint {
   weight: number;
 }
 
-/** Down-sample entries into a smooth trend series for the chart. */
 export function trendSeries(entries: Entry[], maxPoints = 24): TrendPoint[] {
   if (!entries.length) return [];
   const step = Math.max(1, Math.ceil(entries.length / maxPoints));
   const points: TrendPoint[] = [];
   for (let i = 0; i < entries.length; i += step) {
     const e = entries[i];
-    points.push({
-      date: e.date,
-      label: formatShort(e.date),
-      weight: e.weight,
-    });
+    points.push({ date: e.date, label: formatShort(e.date), weight: e.weight });
   }
   const last = entries[entries.length - 1];
   if (points[points.length - 1]?.date !== last.date) {
@@ -67,42 +59,96 @@ export function trendSeries(entries: Entry[], maxPoints = 24): TrendPoint[] {
   return points;
 }
 
-/** Average change in lbs/week over a recent window (negative = losing). */
+/** 7-day backward moving average for each trend point, computed from raw entries. */
+export function movingAverageMap(entries: Entry[]): Record<string, number> {
+  const map: Record<string, number> = {};
+  for (const e of entries) {
+    const cutoff = isoAddDays(e.date, -6); // 7-day window inclusive
+    const window = entries.filter((x) => x.date >= cutoff && x.date <= e.date);
+    map[e.date] = window.reduce((s, x) => s + x.weight, 0) / window.length;
+  }
+  return map;
+}
+
+/**
+ * Average lbs/week over a recent window (negative = losing weight).
+ * Pass windowDays=Infinity for full-journey average.
+ */
 export function weeklyRate(entries: Entry[], windowDays = 28): number {
   if (entries.length < 2) return 0;
   const last = entries[entries.length - 1];
-  const cutoff = new Date(last.date);
-  cutoff.setDate(cutoff.getDate() - windowDays);
-  const recent = entries.filter((e) => new Date(e.date) >= cutoff);
-  const series = recent.length >= 2 ? recent : entries;
+  let series = entries;
+  if (isFinite(windowDays)) {
+    const cutoff = isoAddDays(last.date, -windowDays);
+    const recent = entries.filter((e) => e.date >= cutoff);
+    series = recent.length >= 2 ? recent : entries;
+  }
   const a = series[0];
   const b = series[series.length - 1];
-  const days = Math.max(1, (new Date(b.date).getTime() - new Date(a.date).getTime()) / 86400000);
-  const perDay = (b.weight - a.weight) / days;
-  return Math.round(perDay * 7 * 100) / 100;
+  const days = Math.max(
+    1,
+    (isoToUTCDate(b.date).getTime() - isoToUTCDate(a.date).getTime()) / MS_PER_DAY
+  );
+  return Math.round(((b.weight - a.weight) / days) * 7 * 100) / 100;
 }
 
-/** Pounds still to lose to reach goal (0 if already at/under goal). */
 export function remainingToGoal(entries: Entry[], profile: Profile): number {
   const last = latestWeight(entries);
   if (last == null) return 0;
   return Math.max(0, Math.round((last - profile.goalWeight) * 10) / 10);
 }
 
-/**
- * Projected goal date based on the recent rate.
- * Returns "reached" if already at goal, or null if not trending toward it.
- */
-export function projectedGoalDate(entries: Entry[], profile: Profile): string | "reached" | null {
+export function projectedGoalDate(
+  entries: Entry[],
+  profile: Profile
+): string | "reached" | null {
   const remaining = remainingToGoal(entries, profile);
   if (remaining <= 0) return "reached";
-  const rate = weeklyRate(entries); // negative when losing
-  if (rate >= -0.05) return null; // flat or gaining
+  const rate = weeklyRate(entries, 28);
+  if (rate >= -0.05) return null;
   const weeks = remaining / Math.abs(rate);
-  if (!isFinite(weeks) || weeks > 520) return null; // cap at ~10 years
-  const d = new Date(entries[entries.length - 1].date);
-  d.setDate(d.getDate() + Math.round(weeks * 7));
-  return d.toISOString().slice(0, 10);
+  if (!isFinite(weeks) || weeks > 520) return null;
+  const last = entries[entries.length - 1];
+  return isoAddDays(last.date, Math.round(weeks * 7));
+}
+
+export type PaceStatus = "ahead" | "on_track" | "behind" | "reached";
+
+/**
+ * How recent pace compares to the overall journey average.
+ * "ahead"    = recent rate 15 %+ faster than overall
+ * "on_track" = within 25 % of overall
+ * "behind"   = notably slower, flat, or gaining
+ */
+export function paceStatus(
+  entries: Entry[],
+  profile: Profile
+): PaceStatus | null {
+  const remaining = remainingToGoal(entries, profile);
+  if (remaining <= 0) return "reached";
+  if (entries.length < 4) return null;
+
+  const overall = weeklyRate(entries, Infinity); // full journey
+  const recent = weeklyRate(entries, 28); // last 4 weeks
+
+  if (recent >= 0) return "behind";
+  if (overall >= 0) return recent < -0.1 ? "on_track" : "behind";
+
+  // both negative: ratio > 1 means losing faster recently
+  const ratio = recent / overall;
+  if (ratio >= 1.15) return "ahead";
+  if (ratio >= 0.75) return "on_track";
+  return "behind";
+}
+
+/** True when net weight change over the last `days` days is under 0.5 lbs. */
+export function isOnPlateau(entries: Entry[], days = 14): boolean {
+  if (entries.length < 3) return false;
+  const last = entries[entries.length - 1];
+  const cutoff = isoAddDays(last.date, -days);
+  const recent = entries.filter((e) => e.date >= cutoff);
+  if (recent.length < 2) return false;
+  return Math.abs(recent[recent.length - 1].weight - recent[0].weight) < 0.5;
 }
 
 export function bmi(weightLbs: number, heightIn: number): number {
@@ -118,26 +164,20 @@ export function bmiCategory(value: number): string {
   return "Obese";
 }
 
-/** Consecutive days logged, counting back from the most recent entry. */
 export function loggingStreak(entries: Entry[]): number {
   if (!entries.length) return 0;
   const days = new Set(entries.map((e) => e.date));
   let streak = 0;
-  const cursor = new Date(entries[entries.length - 1].date);
-  while (days.has(cursor.toISOString().slice(0, 10))) {
+  let cursor = entries[entries.length - 1].date;
+  while (days.has(cursor)) {
     streak++;
-    cursor.setDate(cursor.getDate() - 1);
+    cursor = isoAddDays(cursor, -1);
   }
   return streak;
 }
 
-export function formatMonthDay(iso: string): string {
-  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-}
-
 export function formatShort(iso: string): string {
-  const d = new Date(iso);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export function formatLong(iso: string): string {
@@ -151,8 +191,7 @@ export function formatLong(iso: string): string {
       : day % 10 === 3 && day !== 13
       ? "rd"
       : "th";
-  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" }).replace(
-    /(\w+) (\d+)/,
-    (_m, mon, yr) => `${mon} ${day}${suffix}, ${yr}`
-  );
+  return d
+    .toLocaleDateString("en-US", { month: "long", year: "numeric" })
+    .replace(/(\w+) (\d+)/, (_m, mon, yr) => `${mon} ${day}${suffix}, ${yr}`);
 }
