@@ -11,7 +11,7 @@ export interface PeriodGroup {
   avgWeight: number;
   /** net change vs the previous bucket's avg, in lbs (negative = lost) */
   netChange: number | null;
-  /** weight lost within the bucket: first entry − last entry, in lbs */
+  /** signed change within the bucket: last entry − first entry, in lbs (negative = lost) */
   lostInPeriod: number;
   /** entries in the bucket, chronological */
   entries: Entry[];
@@ -57,7 +57,7 @@ export function groupByWeek(entries: Entry[], startDate: string): PeriodGroup[] 
       range: rangeLabel(list[0].date, list[list.length - 1].date),
       avgWeight: avgRounded,
       netChange: prevAvg == null ? null : Math.round((avgRounded - prevAvg) * 10) / 10,
-      lostInPeriod: Math.round((list[0].weight - list[list.length - 1].weight) * 10) / 10,
+      lostInPeriod: Math.round((list[list.length - 1].weight - list[0].weight) * 10) / 10,
       entries: list,
     });
     prevAvg = avgRounded;
@@ -99,7 +99,7 @@ export function groupByMonth(entries: Entry[]): PeriodGroup[] {
       range: rangeLabel(list[0].date, list[list.length - 1].date),
       avgWeight: avgRounded,
       netChange: prevAvg == null ? null : Math.round((avgRounded - prevAvg) * 10) / 10,
-      lostInPeriod: Math.round((list[0].weight - list[list.length - 1].weight) * 10) / 10,
+      lostInPeriod: Math.round((list[list.length - 1].weight - list[0].weight) * 10) / 10,
       entries: list,
     });
     prevAvg = avgRounded;
