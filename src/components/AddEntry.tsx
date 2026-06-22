@@ -4,9 +4,17 @@ import type { Unit } from "../units";
 import { toLbs } from "../units";
 import { todayISO } from "../dateUtils";
 
+export type Macros = { protein?: number; carbs?: number; fats?: number; calories?: number };
+
 interface Props {
   unit: Unit;
-  onAdd: (weightLbs: number, waist: number | null, note: string | undefined, date: string) => void;
+  onAdd: (
+    weightLbs: number,
+    waist: number | null,
+    note: string | undefined,
+    date: string,
+    macros?: Macros,
+  ) => void;
 }
 
 export default function AddEntry({ unit, onAdd }: Props) {
@@ -14,6 +22,11 @@ export default function AddEntry({ unit, onAdd }: Props) {
   const [waist, setWaist] = useState("");
   const [date, setDate] = useState(todayISO);
   const [showExtra, setShowExtra] = useState(false);
+  const [showMacros, setShowMacros] = useState(false);
+  const [protein, setProtein] = useState("");
+  const [carbs, setCarbs] = useState("");
+  const [fats, setFats] = useState("");
+  const [calories, setCalories] = useState("");
   const [flash, setFlash] = useState(false);
 
   const today = todayISO();
@@ -23,10 +36,14 @@ export default function AddEntry({ unit, onAdd }: Props) {
     if (!isFinite(entered) || entered <= 0) return;
     const lbs = Math.round(toLbs(entered, unit) * 10) / 10;
     const waistVal = waist ? parseFloat(waist) : null;
-    onAdd(lbs, waistVal && isFinite(waistVal) ? waistVal : null, undefined, date);
-    setValue("");
-    setWaist("");
-    setDate(today);
+    const macros: Macros = {};
+    const p = parseFloat(protein); if (p > 0) macros.protein = p;
+    const c = parseFloat(carbs);   if (c > 0) macros.carbs = c;
+    const f = parseFloat(fats);    if (f > 0) macros.fats = f;
+    const k = parseFloat(calories); if (k > 0) macros.calories = k;
+    onAdd(lbs, waistVal && isFinite(waistVal) ? waistVal : null, undefined, date, macros);
+    setValue(""); setWaist(""); setDate(today);
+    setProtein(""); setCarbs(""); setFats(""); setCalories("");
     setFlash(true);
     setTimeout(() => setFlash(false), 700);
   };
@@ -42,7 +59,7 @@ export default function AddEntry({ unit, onAdd }: Props) {
         }`}
       >
         {/* Weight row */}
-        <div className="flex items-center gap-2 px-3 py-2.5">
+        <div className="flex items-center gap-2 px-4 py-3">
           <ScaleIcon className="h-5 w-5 shrink-0 text-white/35" />
           <input
             value={value}
@@ -64,7 +81,7 @@ export default function AddEntry({ unit, onAdd }: Props) {
 
         {/* Optional waist row */}
         {showExtra && (
-          <div className="flex items-center gap-2 border-t border-white/8 px-3 py-2">
+          <div className="flex items-center gap-2 border-t border-white/8 px-4 py-2.5">
             <span className="text-[0.85rem] text-white/40">Waist (in)</span>
             <input
               value={waist}
@@ -76,8 +93,23 @@ export default function AddEntry({ unit, onAdd }: Props) {
           </div>
         )}
 
+        {/* Optional macros section */}
+        {showMacros && (
+          <div className="border-t border-white/8 px-4 py-3 space-y-2.5">
+            <p className="text-[0.68rem] font-medium uppercase tracking-wide text-white/30">
+              Today's macros — optional
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <MacroField label="Calories" unit="kcal" value={calories} onChange={setCalories} />
+              <MacroField label="Protein" unit="g" value={protein} onChange={setProtein} />
+              <MacroField label="Carbs" unit="g" value={carbs} onChange={setCarbs} />
+              <MacroField label="Fats" unit="g" value={fats} onChange={setFats} />
+            </div>
+          </div>
+        )}
+
         {/* Footer row */}
-        <div className="flex items-center gap-3 border-t border-white/6 px-3 py-1.5">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/6 px-4 py-1.5">
           <label className="flex items-center gap-2 text-[0.72rem] text-white/35">
             <span>For:</span>
             <input
@@ -89,16 +121,54 @@ export default function AddEntry({ unit, onAdd }: Props) {
             />
             {!isToday && <span className="text-accentlight">backdated</span>}
           </label>
-          <button
-            onClick={() => setShowExtra((v) => !v)}
-            className={`ml-auto text-[0.7rem] transition ${
-              showExtra ? "text-accentlight" : "text-white/30 hover:text-white/50"
-            }`}
-          >
-            {showExtra ? "− waist" : "+ waist"}
-          </button>
+          <div className="ml-auto flex gap-3">
+            <button
+              onClick={() => setShowExtra((v) => !v)}
+              className={`text-[0.7rem] transition ${
+                showExtra ? "text-accentlight" : "text-white/30 hover:text-white/50"
+              }`}
+            >
+              {showExtra ? "− waist" : "+ waist"}
+            </button>
+            <button
+              onClick={() => setShowMacros((v) => !v)}
+              className={`text-[0.7rem] transition ${
+                showMacros ? "text-accentlight" : "text-white/30 hover:text-white/50"
+              }`}
+            >
+              {showMacros ? "− macros" : "+ macros"}
+            </button>
+          </div>
         </div>
       </div>
     </section>
+  );
+}
+
+function MacroField({
+  label,
+  unit,
+  value,
+  onChange,
+}: {
+  label: string;
+  unit: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-[0.68rem] text-white/40">
+        {label} <span className="text-white/25">({unit})</span>
+      </span>
+      <input
+        type="number"
+        inputMode="decimal"
+        value={value}
+        placeholder="—"
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-white/10 bg-cardalt px-2.5 py-1.5 text-[0.88rem] text-white placeholder:text-white/20 focus:border-accent focus:outline-none"
+      />
+    </div>
   );
 }

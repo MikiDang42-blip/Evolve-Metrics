@@ -6,6 +6,12 @@ export interface Entry {
   weight: number;
   /** waist circumference in inches (optional) */
   waist?: number;
+  /** macros — grams, optional */
+  protein?: number;
+  carbs?: number;
+  fats?: number;
+  /** total kcal for the day, optional */
+  calories?: number;
   note?: string;
 }
 

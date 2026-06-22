@@ -22,9 +22,7 @@ export default function EntriesList({
   onRemove,
   onEdit,
 }: Props) {
-  // Pre-compute 7-day MA for every entry date — O(n²) but n is small
   const maMap = useMemo(() => movingAverageMap(entries), [entries]);
-
   const rows = [...entries].reverse();
 
   return (
@@ -37,73 +35,87 @@ export default function EntriesList({
         {rows.map((e) => {
           const ma = maMap[e.date] ?? e.weight;
           const vsMA = Math.round((e.weight - ma) * 10) / 10;
-          // For a cut: below MA is encouraging, above MA is just water (neutral)
-          // For a bulk: above MA is encouraging, below is neutral
-          const goodForPhase =
-            phaseMode === "bulk" ? vsMA > 0.1 : vsMA < -0.1;
+          const goodForPhase = phaseMode === "bulk" ? vsMA > 0.1 : vsMA < -0.1;
           const aboveAvg = vsMA > 0.1;
           const belowAvg = vsMA < -0.1;
           const vsMaDisp = fromLbs(Math.abs(vsMA), unit);
+          const hasMacros = e.calories != null || e.protein != null;
 
           return (
             <div
               key={e.id}
-              className="flex items-center gap-2 rounded-xl border border-white/7 bg-card px-3 py-2.5"
+              className="rounded-xl border border-white/7 bg-card px-4 py-3"
             >
-              {/* Trend indicator vs MA */}
-              <div
-                className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[0.65rem] font-bold ${
-                  goodForPhase
-                    ? "bg-loss/12 text-loss"
-                    : aboveAvg || belowAvg
-                    ? "bg-white/6 text-white/30"
-                    : "bg-white/5 text-white/20"
-                }`}
-              >
-                {goodForPhase ? (phaseMode === "bulk" ? "↑" : "↓") : aboveAvg || belowAvg ? "~" : "="}
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <p className="text-[0.93rem] font-semibold text-white">
-                  {fromLbs(e.weight, unit).toFixed(1)}{" "}
-                  <span className="text-[0.78rem] font-normal text-white/45">{unit}</span>
-                  {e.waist != null && (
-                    <span className="ml-2 text-[0.72rem] font-normal text-white/35">
-                      {e.waist}" waist
-                    </span>
-                  )}
-                </p>
-                <p className="text-[0.7rem] text-white/35">{formatShort(e.date)}</p>
-              </div>
-
-              {/* vs 7-day avg — only show meaningful deviations */}
-              {(aboveAvg || belowAvg) && (
-                <span
-                  className={`shrink-0 text-[0.75rem] font-medium tabular-nums ${
-                    goodForPhase ? "text-loss" : "text-white/35"
+              <div className="flex items-center gap-2">
+                {/* Trend indicator vs MA */}
+                <div
+                  className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[0.65rem] font-bold ${
+                    goodForPhase
+                      ? "bg-loss/12 text-loss"
+                      : aboveAvg || belowAvg
+                      ? "bg-white/6 text-white/30"
+                      : "bg-white/5 text-white/20"
                   }`}
                 >
-                  {aboveAvg ? "+" : "−"}
-                  {vsMaDisp.toFixed(1)} avg
-                </span>
-              )}
+                  {goodForPhase
+                    ? phaseMode === "bulk" ? "↑" : "↓"
+                    : aboveAvg || belowAvg ? "~" : "="}
+                </div>
 
-              {onEdit && (
+                <div className="min-w-0 flex-1">
+                  <p className="text-[0.93rem] font-semibold text-white">
+                    {fromLbs(e.weight, unit).toFixed(1)}{" "}
+                    <span className="text-[0.78rem] font-normal text-white/45">{unit}</span>
+                    {e.waist != null && (
+                      <span className="ml-2 text-[0.72rem] font-normal text-white/35">
+                        {e.waist}" waist
+                      </span>
+                    )}
+                  </p>
+                  <p className="text-[0.7rem] text-white/35">{formatShort(e.date)}</p>
+                </div>
+
+                {/* vs 7-day avg */}
+                {(aboveAvg || belowAvg) && (
+                  <span
+                    className={`shrink-0 text-[0.75rem] font-medium tabular-nums ${
+                      goodForPhase ? "text-loss" : "text-white/35"
+                    }`}
+                  >
+                    {aboveAvg ? "+" : "−"}
+                    {vsMaDisp.toFixed(1)} avg
+                  </span>
+                )}
+
+                {onEdit && (
+                  <button
+                    onClick={() => onEdit(e)}
+                    className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white/40 transition hover:bg-white/6 hover:text-accentlight active:scale-90"
+                    aria-label="Edit entry"
+                  >
+                    <PencilIcon className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 <button
-                  onClick={() => onEdit(e)}
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white/25 transition hover:bg-white/5 hover:text-accentlight active:scale-90"
-                  aria-label="Edit entry"
+                  onClick={() => onRemove(e.id)}
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white/40 transition hover:bg-red-500/10 hover:text-red-400 active:scale-90"
+                  aria-label="Delete entry"
                 >
-                  <PencilIcon className="h-3.5 w-3.5" />
+                  <TrashIcon className="h-4 w-4" />
                 </button>
+              </div>
+
+              {/* Macro pill — only shown if entry has macro data */}
+              {hasMacros && (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {e.calories != null && (
+                    <MacroPill label={`${e.calories} kcal`} accent />
+                  )}
+                  {e.protein != null && <MacroPill label={`P ${e.protein}g`} />}
+                  {e.carbs != null && <MacroPill label={`C ${e.carbs}g`} />}
+                  {e.fats != null && <MacroPill label={`F ${e.fats}g`} />}
+                </div>
               )}
-              <button
-                onClick={() => onRemove(e.id)}
-                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-white/25 transition hover:bg-red-500/10 hover:text-red-400 active:scale-90"
-                aria-label="Delete entry"
-              >
-                <TrashIcon className="h-4 w-4" />
-              </button>
             </div>
           );
         })}
@@ -114,5 +126,19 @@ export default function EntriesList({
         )}
       </div>
     </section>
+  );
+}
+
+function MacroPill({ label, accent }: { label: string; accent?: boolean }) {
+  return (
+    <span
+      className={`rounded-full px-2 py-0.5 text-[0.62rem] font-medium ${
+        accent
+          ? "bg-accent/12 text-accentlight/80"
+          : "bg-white/6 text-white/35"
+      }`}
+    >
+      {label}
+    </span>
   );
 }

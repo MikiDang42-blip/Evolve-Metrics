@@ -11,6 +11,7 @@ import {
   remainingToGoal,
   weeklyRate,
   latestWeight,
+  type PlateauCoach,
 } from "../metrics";
 import { fromLbs } from "../units";
 import { InfoIcon } from "../icons";
@@ -69,34 +70,8 @@ export default function Insights({ entries, profile }: Props) {
         )}
       </div>
 
-      {/* Plateau coaching card — specific, not generic */}
-      {coach && (
-        <div className="mb-3 rounded-xl border border-yellow-500/30 bg-yellow-500/8 px-3.5 py-3 space-y-1">
-          <p className="text-[0.83rem] font-semibold text-yellow-300">
-            ⚡ Plateau — 14 days, no net change
-          </p>
-          {coach.currentPaceDate && (
-            <p className="text-[0.76rem] text-yellow-200/70">
-              At −{coach.requiredRate > 0 ? "0.2" : "0.2"} lb/wk:{" "}
-              <span className="font-medium text-yellow-100">
-                goal by {formatMonthYear(coach.currentPaceDate)}
-              </span>
-            </p>
-          )}
-          {coach.historicalPaceDate && (
-            <p className="text-[0.76rem] text-yellow-200/70">
-              At your historical −{coach.historicalRate} lb/wk:{" "}
-              <span className="font-medium text-yellow-100">
-                {formatMonthYear(coach.historicalPaceDate)}
-              </span>
-            </p>
-          )}
-          <p className="text-[0.76rem] text-yellow-200/60">
-            To return to pace, aim for −{coach.requiredRate} lb/wk (~
-            {Math.round(coach.requiredRate * 500)} cal/day deficit).
-          </p>
-        </div>
-      )}
+      {/* Plateau coaching card */}
+      {coach && <PlateauCard coach={coach} />}
 
       <div className="grid grid-cols-2 gap-2.5">
         {/* Rate + pace pill */}
@@ -242,6 +217,71 @@ function BMITile({
             <p className="text-[0.68rem] text-white/30">was {start.toFixed(1)}</p>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+const PLATEAU_TIPS = [
+  { icon: "🔥", tip: "Cut 200–300 more cal/day", detail: "A modest deficit increase is safer than a large drop." },
+  { icon: "🍚", tip: "Try a refeed day", detail: "One higher-carb day can restore leptin and reset water weight." },
+  { icon: "🚶", tip: "Add 2,000 steps/day", detail: "NEAT (non-exercise movement) is often easier than more gym time." },
+  { icon: "😴", tip: "Check your sleep", detail: "Poor sleep raises cortisol, which increases water retention." },
+  { icon: "📅", tip: "Consider a diet break", detail: "1–2 weeks at maintenance resets hormones — weight may dip after." },
+];
+
+function PlateauCard({ coach }: { coach: PlateauCoach }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="mb-3 rounded-xl border border-yellow-500/30 bg-yellow-500/8 px-3.5 py-3 space-y-1">
+      <div className="flex items-center justify-between">
+        <p className="text-[0.83rem] font-semibold text-yellow-300">
+          ⚡ Plateau — 14 days, no net change
+        </p>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="rounded-lg bg-yellow-400/15 px-2.5 py-1 text-[0.68rem] font-semibold text-yellow-200 transition hover:bg-yellow-400/25"
+        >
+          {open ? "Hide tips" : "Break it ↓"}
+        </button>
+      </div>
+
+      {coach.currentPaceDate && (
+        <p className="text-[0.76rem] text-yellow-200/70">
+          At current pace:{" "}
+          <span className="font-medium text-yellow-100">
+            goal by {formatMonthYear(coach.currentPaceDate)}
+          </span>
+        </p>
+      )}
+      {coach.historicalPaceDate && (
+        <p className="text-[0.76rem] text-yellow-200/70">
+          Historical −{coach.historicalRate} lb/wk pace:{" "}
+          <span className="font-medium text-yellow-100">
+            {formatMonthYear(coach.historicalPaceDate)}
+          </span>
+        </p>
+      )}
+      <p className="text-[0.76rem] text-yellow-200/60">
+        To return to pace: −{coach.requiredRate} lb/wk (~{Math.round(coach.requiredRate * 500)} cal/day deficit).
+      </p>
+
+      {open && (
+        <div className="mt-2.5 space-y-2 border-t border-yellow-500/20 pt-2.5">
+          <p className="text-[0.68rem] font-medium uppercase tracking-wide text-yellow-300/60">
+            Plateau-breaking checklist
+          </p>
+          {PLATEAU_TIPS.map(({ icon, tip, detail }) => (
+            <div key={tip} className="flex gap-2">
+              <span className="shrink-0 text-[0.85rem]">{icon}</span>
+              <div>
+                <p className="text-[0.78rem] font-semibold text-yellow-100">{tip}</p>
+                <p className="text-[0.7rem] text-yellow-200/55">{detail}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

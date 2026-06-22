@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from "react";
 import Header from "./components/Header";
 import ProgressRing from "./components/ProgressRing";
 import AddEntry from "./components/AddEntry";
+import type { Macros } from "./components/AddEntry";
 import JourneyMetrics from "./components/JourneyMetrics";
 import WeeklyTrend from "./components/WeeklyTrend";
 import EntriesList from "./components/EntriesList";
@@ -12,6 +13,7 @@ import Drawer from "./components/Drawer";
 import SearchOverlay from "./components/SearchOverlay";
 import EditEntryModal from "./components/EditEntryModal";
 import Celebration from "./components/Celebration";
+import QuickLogModal from "./components/QuickLogModal";
 import { useEntries, useProfile } from "./storage";
 import type { Entry, Profile } from "./types";
 import {
@@ -36,6 +38,7 @@ export default function App() {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [quickLogOpen, setQuickLogOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<Entry | null>(null);
   const [celebrationDismissed, setCelebrationDismissed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -46,8 +49,14 @@ export default function App() {
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 2200);
   };
 
-  const handleAdd = (weightLbs: number, waist: number | null, note: string | undefined, date: string) => {
-    addEntry(weightLbs, waist, note, date);
+  const handleAdd = (
+    weightLbs: number,
+    waist: number | null,
+    note: string | undefined,
+    date: string,
+    macros?: Macros,
+  ) => {
+    addEntry(weightLbs, waist, note, date, macros);
     const isToday = date === todayISO();
     notify(
       `Logged ${fromLbs(weightLbs, profile.unit).toFixed(1)} ${profile.unit}` +
@@ -144,22 +153,28 @@ export default function App() {
               </div>
 
               <div className="mt-6 space-y-5">
-                {/* "Log today" nudge */}
+                {/* "Log today" nudge — purple gradient CTA */}
                 {!loggedToday && (
                   <button
-                    onClick={() => goTo("log")}
-                    className="flex w-full items-center gap-3 rounded-2xl border border-accent/40 bg-accent/8 px-4 py-3 text-left transition hover:bg-accent/15"
+                    onClick={() => setQuickLogOpen(true)}
+                    className="flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-left transition active:scale-[0.99]"
+                    style={{
+                      background: "linear-gradient(135deg, rgba(139,92,246,0.22) 0%, rgba(167,139,250,0.12) 100%)",
+                      border: "1px solid rgba(139,92,246,0.45)",
+                    }}
                   >
-                    <ScaleIcon className="h-5 w-5 shrink-0 text-accentlight" />
+                    <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent/25">
+                      <ScaleIcon className="h-5 w-5 text-accentlight" />
+                    </span>
                     <div className="flex-1">
                       <p className="text-[0.9rem] font-semibold text-white">
                         Log today's weigh-in
                       </p>
-                      <p className="text-[0.75rem] text-white/45">
+                      <p className="text-[0.73rem] text-white/50">
                         Keep your streak going — tap to log
                       </p>
                     </div>
-                    <span className="text-accentlight">→</span>
+                    <span className="text-[1.1rem] text-accentlight">→</span>
                   </button>
                 )}
 
@@ -272,8 +287,19 @@ export default function App() {
           />
         )}
 
+        <QuickLogModal
+          isOpen={quickLogOpen}
+          unit={profile.unit}
+          entries={entries}
+          onAdd={(weightLbs, waist, note, date) => {
+            handleAdd(weightLbs, waist, note, date);
+            setQuickLogOpen(false);
+          }}
+          onClose={() => setQuickLogOpen(false)}
+        />
+
         <Toasts toasts={toasts} />
-        <BottomNav active={tab} onChange={goTo} />
+        <BottomNav active={tab} onChange={goTo} onFABClick={() => setQuickLogOpen(true)} />
       </div>
     </div>
   );

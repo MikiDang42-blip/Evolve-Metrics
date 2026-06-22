@@ -76,17 +76,33 @@ export function useEntries() {
     localStorage.setItem(ENTRIES_KEY, JSON.stringify(entries));
   }, [entries]);
 
-  const addEntry = (weight: number, waist?: number | null, note?: string, date?: string) => {
+  const addEntry = (
+    weight: number,
+    waist?: number | null,
+    note?: string,
+    date?: string,
+    macros?: { protein?: number; carbs?: number; fats?: number; calories?: number },
+  ) => {
     const day = date ?? todayISO();
     setEntries((prev) => {
       const without = prev.filter((e) => e.date !== day);
       const next: Entry = { id: uid(), date: day, weight, note };
       if (waist != null && waist > 0) next.waist = Math.round(waist * 10) / 10;
+      if (macros?.protein) next.protein = Math.round(macros.protein);
+      if (macros?.carbs) next.carbs = Math.round(macros.carbs);
+      if (macros?.fats) next.fats = Math.round(macros.fats);
+      if (macros?.calories) next.calories = Math.round(macros.calories);
       return sortEntries([...without, next]);
     });
   };
 
-  const updateEntry = (id: string, weight: number, date: string, waist?: number | null) => {
+  const updateEntry = (
+    id: string,
+    weight: number,
+    date: string,
+    waist?: number | null,
+    macros?: { protein?: number; carbs?: number; fats?: number; calories?: number },
+  ) => {
     setEntries((prev) => {
       const existing = prev.find((e) => e.id === id);
       if (!existing) return prev;
@@ -94,6 +110,14 @@ export function useEntries() {
       const updated: Entry = { ...existing, weight: Math.round(weight * 10) / 10, date };
       if (waist != null && waist > 0) updated.waist = Math.round(waist * 10) / 10;
       else delete updated.waist;
+      if (macros?.protein) updated.protein = Math.round(macros.protein);
+      else delete updated.protein;
+      if (macros?.carbs) updated.carbs = Math.round(macros.carbs);
+      else delete updated.carbs;
+      if (macros?.fats) updated.fats = Math.round(macros.fats);
+      else delete updated.fats;
+      if (macros?.calories) updated.calories = Math.round(macros.calories);
+      else delete updated.calories;
       return sortEntries([...without, updated]);
     });
   };
