@@ -243,7 +243,7 @@ function PlateauCard({ coach }: { coach: PlateauCoach }) {
           onClick={() => setOpen((v) => !v)}
           className="rounded-lg bg-yellow-400/15 px-2.5 py-1 text-[0.68rem] font-semibold text-yellow-200 transition hover:bg-yellow-400/25"
         >
-          {open ? "Hide tips" : "Break it ↓"}
+          {open ? "Hide tips ↑" : "Break it ↓"}
         </button>
       </div>
 

@@ -14,6 +14,7 @@ import SearchOverlay from "./components/SearchOverlay";
 import EditEntryModal from "./components/EditEntryModal";
 import Celebration from "./components/Celebration";
 import QuickLogModal from "./components/QuickLogModal";
+import HistoryView from "./components/HistoryView";
 import { useEntries, useProfile } from "./storage";
 import type { Entry, Profile } from "./types";
 import {
@@ -227,9 +228,9 @@ export default function App() {
                 <span>🔍</span>
                 <span>Search entries…</span>
               </button>
-              <EntriesList
+              <HistoryView
                 entries={entries}
-                unit={profile.unit}
+                profile={profile}
                 phaseMode={mode}
                 onRemove={handleRemove}
                 onEdit={setEditEntry}
