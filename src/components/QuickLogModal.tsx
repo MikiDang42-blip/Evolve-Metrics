@@ -64,7 +64,7 @@ export default function QuickLogModal({ isOpen, unit, entries, onAdd, onClose }:
             <CloseIcon className="h-4.5 w-4.5" />
           </button>
         </div>
-        <p className="mb-4 text-[0.75rem] text-white/35">
+        <p className="mb-4 text-[0.75rem] text-white/45">
           Today · {new Date().toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
         </p>
 
@@ -94,8 +94,8 @@ export default function QuickLogModal({ isOpen, unit, entries, onAdd, onClose }:
           {flash ? "Logged ✓" : "Log Weight"}
         </button>
 
-        <p className="mt-3 text-center text-[0.72rem] text-white/25">
-          For detailed options, go to the Log tab
+        <p className="mt-3 text-center text-[0.72rem] text-white/40">
+          For backdating, waist, or macros, use the Log tab
         </p>
       </div>
     </>

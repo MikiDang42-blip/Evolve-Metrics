@@ -107,8 +107,14 @@ function PeriodList({
   }
   return (
     <div className="space-y-2">
-      {groups.map((g) => (
-        <PeriodCard key={g.key} group={g} unit={unit} phaseMode={phaseMode} metric={metric} />
+      {groups.map((g, i) => (
+        <div
+          key={g.key}
+          className="animate-fade-up"
+          style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}
+        >
+          <PeriodCard group={g} unit={unit} phaseMode={phaseMode} metric={metric} />
+        </div>
       ))}
     </div>
   );
@@ -151,7 +157,7 @@ function PeriodCard({
         {/* Left: period label */}
         <div className="min-w-0 flex-1">
           <p className="text-[1.05rem] font-bold text-white">{group.title}</p>
-          <p className="text-[0.72rem] text-white/35">{group.range}</p>
+          <p className="text-[0.72rem] text-white/45">{group.range}</p>
         </div>
 
         {/* Right: true weight + change */}
@@ -169,7 +175,7 @@ function PeriodCard({
               {down ? "↓" : up ? "↑" : "→"} {changeDisp.toFixed(1)} {unit} {changeWord}
             </p>
           ) : (
-            <p className="text-[0.72rem] text-white/30">
+            <p className="text-[0.72rem] text-white/40">
               {metric === "total" ? "avg weight" : "first period"}
             </p>
           )}
@@ -184,7 +190,7 @@ function PeriodCard({
 
       {/* Accordion: the daily logs that make up this period */}
       {open && (
-        <div className="border-t border-white/6 px-4 py-2">
+        <div className="animate-fade-up border-t border-white/6 px-4 py-2">
           {[...group.entries].reverse().map((e) => (
             <div
               key={e.id}

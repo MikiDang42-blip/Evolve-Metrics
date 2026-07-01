@@ -63,7 +63,7 @@ export default function ConsistencyGrid({ entries }: Props) {
         className="grid grid-flow-col gap-[3px]"
         style={{ gridTemplateRows: "repeat(7, 1fr)" }}
       >
-        {cells.map(({ date, state }) => (
+        {cells.map(({ date, state }, i) => (
           <div
             key={date}
             title={
@@ -71,18 +71,19 @@ export default function ConsistencyGrid({ entries }: Props) {
                 ? undefined
                 : `${date} — ${state === "logged" ? "logged" : "not logged"}`
             }
-            className={`aspect-square w-full rounded-[3px] ${
+            className={`animate-cell-in aspect-square w-full rounded-[3px] ${
               state === "logged"
                 ? "bg-accent"
                 : state === "missed"
                 ? "bg-white/6"
                 : "bg-transparent"
             } ${date === today ? "ring-1 ring-accentlight/70" : ""}`}
+            style={{ animationDelay: `${Math.floor(i / 7) * 25}ms` }}
           />
         ))}
       </div>
 
-      <div className="mt-2 flex items-center justify-between text-[0.65rem] text-white/30">
+      <div className="mt-2 flex items-center justify-between text-[0.65rem] text-white/40">
         <span>{startLabel}</span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2 w-2 rounded-[2px] bg-white/6" /> missed

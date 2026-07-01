@@ -268,7 +268,7 @@ function PlateauCard({ coach }: { coach: PlateauCoach }) {
       </p>
 
       {open && (
-        <div className="mt-2.5 space-y-2 border-t border-yellow-500/20 pt-2.5">
+        <div className="animate-fade-up mt-2.5 space-y-2 border-t border-yellow-500/20 pt-2.5">
           <p className="text-[0.68rem] font-medium uppercase tracking-wide text-yellow-300/60">
             Plateau-breaking checklist
           </p>

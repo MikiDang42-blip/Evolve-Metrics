@@ -29,10 +29,10 @@ export default function EntriesList({
     <section>
       <div className="mb-2 flex items-baseline justify-between px-1">
         <h2 className="text-[0.95rem] font-semibold text-white">{title}</h2>
-        <span className="text-[0.75rem] text-white/35">{entries.length} logged</span>
+        <span className="text-[0.75rem] text-white/45">{entries.length} logged</span>
       </div>
       <div className="space-y-1.5">
-        {rows.map((e) => {
+        {rows.map((e, i) => {
           const ma = maMap[e.date] ?? e.weight;
           const vsMA = Math.round((e.weight - ma) * 10) / 10;
           const goodForPhase = phaseMode === "bulk" ? vsMA > 0.1 : vsMA < -0.1;
@@ -44,7 +44,8 @@ export default function EntriesList({
           return (
             <div
               key={e.id}
-              className="rounded-xl border border-white/7 bg-card px-4 py-3"
+              className="animate-fade-up rounded-xl border border-white/8 bg-card px-4 py-3"
+              style={{ animationDelay: `${Math.min(i, 10) * 30}ms` }}
             >
               <div className="flex items-center gap-2">
                 {/* Trend indicator vs MA */}
@@ -67,19 +68,19 @@ export default function EntriesList({
                     {fromLbs(e.weight, unit).toFixed(1)}{" "}
                     <span className="text-[0.78rem] font-normal text-white/45">{unit}</span>
                     {e.waist != null && (
-                      <span className="ml-2 text-[0.72rem] font-normal text-white/35">
+                      <span className="ml-2 text-[0.72rem] font-normal text-white/45">
                         {e.waist}" waist
                       </span>
                     )}
                   </p>
-                  <p className="text-[0.7rem] text-white/35">{formatShort(e.date)}</p>
+                  <p className="text-[0.7rem] text-white/45">{formatShort(e.date)}</p>
                 </div>
 
                 {/* vs 7-day avg */}
                 {(aboveAvg || belowAvg) && (
                   <span
                     className={`shrink-0 text-[0.75rem] font-medium tabular-nums ${
-                      goodForPhase ? "text-loss" : "text-white/35"
+                      goodForPhase ? "text-loss" : "text-white/45"
                     }`}
                   >
                     {aboveAvg ? "+" : "−"}

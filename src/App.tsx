@@ -133,42 +133,65 @@ export default function App() {
           ref={scrollRef}
           className="no-scrollbar absolute inset-x-0 bottom-0 top-[52px] overflow-y-auto px-5 pb-28"
         >
+          {/* Faint ambient glow at the top of every tab */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -top-24 left-1/2 h-56 w-[120%] -translate-x-1/2 rounded-full bg-accent/[0.07] blur-3xl"
+          />
+
           {/* ── HOME ─────────────────────────────────────── */}
           {tab === "home" && (
-            <div className="animate-fade-up">
+            <div className="relative animate-fade-up">
+              {/* Ambient glow behind the hero */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -top-16 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-accent/20 blur-3xl"
+              />
+
               {/* Hero — 7-day average is the star */}
-              <div className="flex flex-col items-center pt-1">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-[2.6rem] font-bold leading-none text-white">
+              <div className="relative flex flex-col items-center pt-1">
+                <div
+                  key={fromLbs(ma7 ?? current, profile.unit).toFixed(1)}
+                  className="animate-pop flex items-baseline gap-1.5"
+                >
+                  <span className="text-[2.6rem] font-bold leading-none tracking-tight text-white">
                     {fromLbs(ma7 ?? current, profile.unit).toFixed(1)}
                   </span>
                   <span className="text-[1.1rem] font-medium text-white/50">
                     {profile.unit}
                   </span>
                 </div>
-                <p className="mt-0.5 text-[0.72rem] text-white/35">7-day average</p>
+                <p className="mt-0.5 text-[0.72rem] text-white/50">7-day average</p>
 
-                {/* Weekly slope */}
-                <div className="mt-2 flex items-center gap-1.5 text-[0.88rem]">
+                {/* Weekly slope — the app's status badge */}
+                <div
+                  className={`mt-2.5 flex items-center gap-1.5 rounded-full border px-3 py-1 text-[0.85rem] ${
+                    trendDisplay.tone === "good"
+                      ? "border-loss/25 bg-loss/10"
+                      : trendDisplay.tone === "warn"
+                      ? "border-red-400/25 bg-red-400/10"
+                      : "border-white/10 bg-white/5"
+                  }`}
+                >
                   <span
                     className={
                       trendDisplay.tone === "good"
                         ? "font-semibold text-loss"
                         : trendDisplay.tone === "warn"
                         ? "font-semibold text-red-400"
-                        : "font-medium text-white/55"
+                        : "font-medium text-white/60"
                     }
                   >
                     {rate < -0.05 ? "−" : rate > 0.05 ? "+" : "±"}
                     {fromLbs(Math.abs(rate), profile.unit).toFixed(1)} {profile.unit}/wk
                   </span>
                   <span className="text-white/25">·</span>
-                  <span className="text-white/45">{trendDisplay.label}</span>
+                  <span className="text-white/55">{trendDisplay.label}</span>
                 </div>
 
                 {/* Today's raw log — secondary context */}
                 {loggedToday && (
-                  <p className="mt-1 text-[0.72rem] text-white/28">
+                  <p className="mt-1.5 text-[0.72rem] text-white/45">
                     Today's log: {fromLbs(current, profile.unit).toFixed(1)} {profile.unit}
                   </p>
                 )}
@@ -255,7 +278,7 @@ export default function App() {
             <div className="animate-fade-up pt-1">
               <button
                 onClick={() => setSearchOpen(true)}
-                className="mb-4 flex w-full items-center gap-2.5 rounded-xl border border-white/8 bg-card px-4 py-2.5 text-left text-[0.9rem] text-white/35 hover:border-white/15"
+                className="mb-4 flex w-full items-center gap-2.5 rounded-xl border border-white/8 bg-card px-4 py-2.5 text-left text-[0.9rem] text-white/45 hover:border-white/15"
               >
                 <span>🔍</span>
                 <span>Search entries…</span>
@@ -333,7 +356,12 @@ export default function App() {
         />
 
         <Toasts toasts={toasts} />
-        <BottomNav active={tab} onChange={goTo} onFABClick={() => setQuickLogOpen(true)} />
+        <BottomNav
+          active={tab}
+          onChange={goTo}
+          onFABClick={() => setQuickLogOpen(true)}
+          pulseFAB={!loggedToday}
+        />
       </div>
     </div>
   );

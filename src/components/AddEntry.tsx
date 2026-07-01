@@ -83,7 +83,7 @@ export default function AddEntry({ unit, onAdd }: Props) {
 
         {/* Optional waist row */}
         {showExtra && (
-          <div className="flex items-center gap-2 border-t border-white/8 px-4 py-2.5">
+          <div className="animate-fade-up flex items-center gap-2 border-t border-white/8 px-4 py-2.5">
             <span className="text-[0.85rem] text-white/40">Waist (in)</span>
             <input
               value={waist}
@@ -97,7 +97,7 @@ export default function AddEntry({ unit, onAdd }: Props) {
 
         {/* Optional note row */}
         {showNote && (
-          <div className="flex items-center gap-2 border-t border-white/8 px-4 py-2.5">
+          <div className="animate-fade-up flex items-center gap-2 border-t border-white/8 px-4 py-2.5">
             <span className="text-[0.85rem] text-white/40">Note</span>
             <input
               value={note}
@@ -111,7 +111,7 @@ export default function AddEntry({ unit, onAdd }: Props) {
 
         {/* Optional macros section */}
         {showMacros && (
-          <div className="border-t border-white/8 px-4 py-3 space-y-2.5">
+          <div className="animate-fade-up border-t border-white/8 px-4 py-3 space-y-2.5">
             <p className="text-[0.68rem] font-medium uppercase tracking-wide text-white/30">
               Today's macros — optional
             </p>
@@ -126,7 +126,7 @@ export default function AddEntry({ unit, onAdd }: Props) {
 
         {/* Footer row */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-white/6 px-4 py-1.5">
-          <label className="flex items-center gap-2 text-[0.72rem] text-white/35">
+          <label className="flex items-center gap-2 text-[0.72rem] text-white/45">
             <span>For:</span>
             <input
               type="date"
