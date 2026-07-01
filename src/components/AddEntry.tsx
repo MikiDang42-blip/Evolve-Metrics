@@ -20,8 +20,10 @@ interface Props {
 export default function AddEntry({ unit, onAdd }: Props) {
   const [value, setValue] = useState("");
   const [waist, setWaist] = useState("");
+  const [note, setNote] = useState("");
   const [date, setDate] = useState(todayISO);
   const [showExtra, setShowExtra] = useState(false);
+  const [showNote, setShowNote] = useState(false);
   const [showMacros, setShowMacros] = useState(false);
   const [protein, setProtein] = useState("");
   const [carbs, setCarbs] = useState("");
@@ -41,8 +43,8 @@ export default function AddEntry({ unit, onAdd }: Props) {
     const c = parseFloat(carbs);   if (c > 0) macros.carbs = c;
     const f = parseFloat(fats);    if (f > 0) macros.fats = f;
     const k = parseFloat(calories); if (k > 0) macros.calories = k;
-    onAdd(lbs, waistVal && isFinite(waistVal) ? waistVal : null, undefined, date, macros);
-    setValue(""); setWaist(""); setDate(today);
+    onAdd(lbs, waistVal && isFinite(waistVal) ? waistVal : null, note.trim() || undefined, date, macros);
+    setValue(""); setWaist(""); setNote(""); setDate(today);
     setProtein(""); setCarbs(""); setFats(""); setCalories("");
     setFlash(true);
     setTimeout(() => setFlash(false), 700);
@@ -93,6 +95,20 @@ export default function AddEntry({ unit, onAdd }: Props) {
           </div>
         )}
 
+        {/* Optional note row */}
+        {showNote && (
+          <div className="flex items-center gap-2 border-t border-white/8 px-4 py-2.5">
+            <span className="text-[0.85rem] text-white/40">Note</span>
+            <input
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              maxLength={200}
+              placeholder="e.g. salty dinner, refeed day…"
+              className="min-w-0 flex-1 bg-transparent text-[0.85rem] text-white placeholder:text-white/25 focus:outline-none"
+            />
+          </div>
+        )}
+
         {/* Optional macros section */}
         {showMacros && (
           <div className="border-t border-white/8 px-4 py-3 space-y-2.5">
@@ -129,6 +145,14 @@ export default function AddEntry({ unit, onAdd }: Props) {
               }`}
             >
               {showExtra ? "− waist" : "+ waist"}
+            </button>
+            <button
+              onClick={() => setShowNote((v) => !v)}
+              className={`text-[0.7rem] transition ${
+                showNote ? "text-accentlight" : "text-white/30 hover:text-white/50"
+              }`}
+            >
+              {showNote ? "− note" : "+ note"}
             </button>
             <button
               onClick={() => setShowMacros((v) => !v)}

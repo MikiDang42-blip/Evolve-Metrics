@@ -1,11 +1,11 @@
-import { useMemo, useRef, useState } from "react";
+import { Suspense, lazy, useMemo, useRef, useState } from "react";
 import Header from "./components/Header";
 import ProgressRing from "./components/ProgressRing";
 import AddEntry from "./components/AddEntry";
 import type { Macros } from "./components/AddEntry";
 import JourneyMetrics from "./components/JourneyMetrics";
-import WeeklyTrend from "./components/WeeklyTrend";
 import EntriesList from "./components/EntriesList";
+import ConsistencyGrid from "./components/ConsistencyGrid";
 import Insights from "./components/Insights";
 import BottomNav from "./components/BottomNav";
 import Toasts, { type Toast } from "./components/Toasts";
@@ -27,12 +27,15 @@ import {
   weeklyRate,
 } from "./metrics";
 import { fromLbs, toLbs, type Unit } from "./units";
-import { exportCSV, exportJSON } from "./export";
+import { exportCSV, exportJSON, parseImport } from "./export";
 import { todayISO } from "./dateUtils";
-import { BellIcon, DownloadIcon, ScaleIcon } from "./icons";
+import { BellIcon, DownloadIcon, ScaleIcon, UploadIcon } from "./icons";
+
+// Lazy-load the chart so recharts stays out of the initial bundle
+const WeeklyTrend = lazy(() => import("./components/WeeklyTrend"));
 
 export default function App() {
-  const { entries, addEntry, updateEntry, removeEntry, resetAll } = useEntries();
+  const { entries, addEntry, updateEntry, removeEntry, replaceEntries, resetAll } = useEntries();
   const { profile, setProfile } = useProfile();
 
   const [tab, setTab] = useState("home");
@@ -65,14 +68,36 @@ export default function App() {
     );
   };
 
-  const handleUpdate = (id: string, weightLbs: number, date: string, waist?: number | null) => {
-    updateEntry(id, weightLbs, date, waist);
+  const handleUpdate = (
+    id: string,
+    weightLbs: number,
+    date: string,
+    waist?: number | null,
+    macros?: Macros,
+    note?: string | null,
+  ) => {
+    updateEntry(id, weightLbs, date, waist, macros, note);
     notify(`Updated to ${fromLbs(weightLbs, profile.unit).toFixed(1)} ${profile.unit}`);
   };
 
   const handleRemove = (id: string) => {
     removeEntry(id);
     notify("Entry deleted", "info");
+  };
+
+  const handleImport = async (file: File) => {
+    try {
+      const { entries: imported, profile: importedProfile } = parseImport(await file.text());
+      const ok = window.confirm(
+        `Replace your current ${entries.length} entries with ${imported.length} from this backup? This cannot be undone.`
+      );
+      if (!ok) return;
+      replaceEntries(imported);
+      if (importedProfile) setProfile({ ...profile, ...importedProfile });
+      notify(`Restored ${imported.length} entries from backup`);
+    } catch (err) {
+      notify(err instanceof Error ? err.message : "Import failed", "error");
+    }
   };
 
   const current = latestWeight(entries) ?? profile.startWeight;
@@ -188,13 +213,20 @@ export default function App() {
           {tab === "trends" && (
             <div className="animate-fade-up space-y-5 pt-1">
               {entries.length > 1 ? (
-                <WeeklyTrend entries={entries} profile={profile} />
+                <Suspense
+                  fallback={
+                    <div className="h-64 animate-pulse rounded-2xl border border-white/8 bg-card" />
+                  }
+                >
+                  <WeeklyTrend entries={entries} profile={profile} />
+                </Suspense>
               ) : (
                 <div className="rounded-2xl border border-white/8 bg-card px-4 py-8 text-center text-[0.85rem] text-white/35">
                   Log at least 2 entries to see your trend.
                 </div>
               )}
               <Insights entries={entries} profile={profile} />
+              <ConsistencyGrid entries={entries} />
             </div>
           )}
 
@@ -249,6 +281,7 @@ export default function App() {
               }}
               onExportCSV={() => { exportCSV(entries, profile); notify("CSV downloaded"); }}
               onExportJSON={() => { exportJSON(entries, profile); notify("JSON downloaded"); }}
+              onImport={handleImport}
             />
           )}
         </div>
@@ -314,12 +347,14 @@ function ProfilePanel({
   onReset,
   onExportCSV,
   onExportJSON,
+  onImport,
 }: {
   profile: Profile;
   setProfile: (p: Profile) => void;
   onReset: () => void;
   onExportCSV: () => void;
   onExportJSON: () => void;
+  onImport: (file: File) => void;
 }) {
   const unit = profile.unit;
   const field =
@@ -433,9 +468,9 @@ function ProfilePanel({
         )}
       </div>
 
-      {/* Export */}
+      {/* Backup & restore */}
       <div className="rounded-2xl border border-white/8 bg-card p-4 space-y-2">
-        <p className="text-[0.85rem] text-white/50">Export your data</p>
+        <p className="text-[0.85rem] text-white/50">Backup & restore</p>
         <div className="flex gap-2">
           <button
             onClick={onExportCSV}
@@ -451,9 +486,24 @@ function ProfilePanel({
             <DownloadIcon className="h-4 w-4" />
             JSON
           </button>
+          <label className="flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/10 py-2.5 text-[0.82rem] font-medium text-white/70 transition hover:border-loss/40 hover:text-loss">
+            <UploadIcon className="h-4 w-4" />
+            Import
+            <input
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) onImport(f);
+                e.target.value = "";
+              }}
+            />
+          </label>
         </div>
         <p className="text-[0.72rem] text-white/35">
-          Data is stored locally. Export a backup before clearing browser data.
+          Data is stored locally. Export a JSON backup before clearing browser
+          data — Import restores it on any device.
         </p>
       </div>
 

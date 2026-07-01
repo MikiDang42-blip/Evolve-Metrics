@@ -33,7 +33,8 @@ export default function SearchOverlay({ entries, unit, onClose, onRemove, onEdit
             e.date.includes(q) ||
             formatShort(e.date).toLowerCase().includes(q.toLowerCase()) ||
             weightStr.includes(q) ||
-            rawStr.includes(q)
+            rawStr.includes(q) ||
+            (e.note ?? "").toLowerCase().includes(q.toLowerCase())
           );
         })
     : [...entries].reverse().slice(0, 30);
@@ -47,7 +48,7 @@ export default function SearchOverlay({ entries, unit, onClose, onRemove, onEdit
           ref={inputRef}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search by date or weight…"
+          placeholder="Search date, weight, or note…"
           className="min-w-0 flex-1 bg-transparent text-[0.95rem] text-white placeholder:text-white/30 focus:outline-none"
         />
         <button
@@ -89,6 +90,9 @@ export default function SearchOverlay({ entries, unit, onClose, onRemove, onEdit
                   {fromLbs(e.weight, unit).toFixed(1)} {unit}
                 </p>
                 <p className="text-[0.72rem] text-white/40">{formatShort(e.date)}</p>
+                {e.note && (
+                  <p className="truncate text-[0.7rem] italic text-white/35">“{e.note}”</p>
+                )}
               </div>
               {prev && delta !== 0 && (
                 <span className={`text-[0.78rem] font-medium ${down ? "text-loss" : "text-red-400"}`}>

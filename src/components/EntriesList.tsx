@@ -105,6 +105,11 @@ export default function EntriesList({
                 </button>
               </div>
 
+              {/* Note — user's own context for the day */}
+              {e.note && (
+                <p className="mt-1.5 text-[0.72rem] italic text-white/40">“{e.note}”</p>
+              )}
+
               {/* Macro pill — only shown if entry has macro data */}
               {hasMacros && (
                 <div className="mt-1.5 flex flex-wrap gap-1.5">

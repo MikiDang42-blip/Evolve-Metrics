@@ -17,10 +17,20 @@ function startDateISO(): string {
   return isoAddDays(todayISO(), -JOURNEY_WEEKS * 7);
 }
 
+const START_WAIST = 38.5;
+const CURRENT_WAIST = 34.2;
+
+const SEED_NOTES: Record<number, string> = {
+  2: "Salty takeout last night 🍜",
+  6: "Refeed day — up is expected",
+  9: "Long run this morning",
+};
+
 function seedEntries(): Entry[] {
   const start = startDateISO();
   const totalDays = isoDaysBetween(start, todayISO());
   const totalDrop = START_WEIGHT - CURRENT_WEIGHT;
+  const waistDrop = START_WAIST - CURRENT_WAIST;
   const dailyTail = 14;
 
   const dayOffsets: number[] = [];
@@ -31,11 +41,28 @@ function seedEntries(): Entry[] {
     const t = offset / totalDays;
     const eased = 1 - Math.pow(1 - t, 1.4);
     const noise = (Math.random() - 0.5) * 0.8;
-    return {
+    const e: Entry = {
       id: uid(),
       date: isoAddDays(start, offset),
       weight: Math.round((START_WEIGHT - totalDrop * eased + noise) * 10) / 10,
     };
+    // Weekly waist measurement — stalls less than scale weight
+    if (offset % 7 === 0 || offset === totalDays) {
+      e.waist = Math.round((START_WAIST - waistDrop * eased) * 10) / 10;
+    }
+    // Recent days carry macros + the occasional note, to showcase both
+    const daysAgo = totalDays - offset;
+    if (daysAgo <= 6) {
+      const p = 175 + Math.round(Math.random() * 15);
+      const c = 170 + Math.round(Math.random() * 60);
+      const f = 55 + Math.round(Math.random() * 15);
+      e.protein = p;
+      e.carbs = c;
+      e.fats = f;
+      e.calories = Math.round((p * 4 + c * 4 + f * 9) / 10) * 10;
+    }
+    if (SEED_NOTES[daysAgo]) e.note = SEED_NOTES[daysAgo];
+    return e;
   });
 
   if (entries.length >= 2) {
@@ -102,6 +129,7 @@ export function useEntries() {
     date: string,
     waist?: number | null,
     macros?: { protein?: number; carbs?: number; fats?: number; calories?: number },
+    note?: string | null,
   ) => {
     setEntries((prev) => {
       const existing = prev.find((e) => e.id === id);
@@ -110,14 +138,22 @@ export function useEntries() {
       const updated: Entry = { ...existing, weight: Math.round(weight * 10) / 10, date };
       if (waist != null && waist > 0) updated.waist = Math.round(waist * 10) / 10;
       else delete updated.waist;
-      if (macros?.protein) updated.protein = Math.round(macros.protein);
-      else delete updated.protein;
-      if (macros?.carbs) updated.carbs = Math.round(macros.carbs);
-      else delete updated.carbs;
-      if (macros?.fats) updated.fats = Math.round(macros.fats);
-      else delete updated.fats;
-      if (macros?.calories) updated.calories = Math.round(macros.calories);
-      else delete updated.calories;
+      // Only touch macros when the caller provides them — undefined means
+      // "leave as-is" so callers without macro UI can't wipe logged data.
+      if (macros) {
+        if (macros.protein) updated.protein = Math.round(macros.protein);
+        else delete updated.protein;
+        if (macros.carbs) updated.carbs = Math.round(macros.carbs);
+        else delete updated.carbs;
+        if (macros.fats) updated.fats = Math.round(macros.fats);
+        else delete updated.fats;
+        if (macros.calories) updated.calories = Math.round(macros.calories);
+        else delete updated.calories;
+      }
+      if (note !== undefined) {
+        if (note && note.trim()) updated.note = note.trim().slice(0, 200);
+        else delete updated.note;
+      }
       return sortEntries([...without, updated]);
     });
   };
@@ -126,11 +162,15 @@ export function useEntries() {
     setEntries((prev) => prev.filter((e) => e.id !== id));
   };
 
+  const replaceEntries = (list: Entry[]) => {
+    setEntries(sortEntries(list));
+  };
+
   const resetAll = () => {
     setEntries(sortEntries(seedEntries()));
   };
 
-  return { entries, addEntry, updateEntry, removeEntry, resetAll };
+  return { entries, addEntry, updateEntry, removeEntry, replaceEntries, resetAll };
 }
 
 export function useProfile() {
