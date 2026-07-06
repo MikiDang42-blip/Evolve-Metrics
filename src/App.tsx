@@ -124,6 +124,15 @@ export default function App() {
     <div className="flex min-h-full items-center justify-center bg-[#050507] p-0 sm:p-6">
       <div className="relative h-[100dvh] w-full max-w-[420px] overflow-hidden bg-bg sm:h-[860px] sm:rounded-[2.5rem] sm:border-[10px] sm:border-black sm:shadow-2xl sm:shadow-black/60">
 
+        {/* Ambient glow — lives on the frame layer so nothing clips it;
+            the radial falloff dies out before reaching any edge */}
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute left-1/2 top-0 h-80 w-80 -translate-x-1/2 -translate-y-1/3 rounded-full blur-3xl transition-colors duration-700 ${
+            tab === "home" ? "bg-accent/20" : "bg-accent/[0.08]"
+          }`}
+        />
+
         <Header
           onMenuClick={() => setDrawerOpen(true)}
           onSearchClick={() => setSearchOpen(true)}
@@ -133,23 +142,11 @@ export default function App() {
           ref={scrollRef}
           className="no-scrollbar absolute inset-x-0 bottom-0 top-[52px] overflow-y-auto px-5 pb-28"
         >
-          {/* Faint ambient glow at the top of every tab */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -top-24 left-1/2 h-56 w-[120%] -translate-x-1/2 rounded-full bg-accent/[0.07] blur-3xl"
-          />
-
           {/* ── HOME ─────────────────────────────────────── */}
           {tab === "home" && (
-            <div className="relative animate-fade-up">
-              {/* Ambient glow behind the hero */}
-              <div
-                aria-hidden
-                className="pointer-events-none absolute -top-16 left-1/2 h-64 w-64 -translate-x-1/2 rounded-full bg-accent/20 blur-3xl"
-              />
-
+            <div className="animate-fade-up">
               {/* Hero — 7-day average is the star */}
-              <div className="relative flex flex-col items-center pt-1">
+              <div className="flex flex-col items-center pt-1">
                 <div
                   key={fromLbs(ma7 ?? current, profile.unit).toFixed(1)}
                   className="animate-pop flex items-baseline gap-1.5"
